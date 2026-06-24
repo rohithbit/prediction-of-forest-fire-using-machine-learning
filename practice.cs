@@ -1,4 +1,134 @@
-StudentService.cs
+program.cs
+using dotnetapp.Services;
+using dotnetapp.Repository;
+using dotnetapp.Models;
+ 
+var builder = WebApplication.CreateBuilder(args);
+ 
+// Add Event services to the container.
+ 
+builder.Services.AddControllers();
+// builder.Services.AddSingleton<StudentService>();
+builder.Services.AddSingleton<BookRepository>();
+builder.Services.AddSingleton<OrderRepository>();
+builder.Services.AddSingleton<IBookService, BookService>();
+builder.Services.AddSingleton<IOrderService, OrderService>();
+ 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+ 
+var app = builder.Build();
+ 
+app.Urls.Add("http://0.0.0.0:8080");
+ 
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+ 
+app.UseHttpsRedirection();
+ 
+app.UseAuthorization();
+ 
+app.MapControllers();
+ 
+app.Run();
+ 
+ 
+services>BookServices.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using dotnetapp.Models;
+using dotnetapp.Repository;
+ 
+namespace dotnetapp.Services
+{
+    public class BookService : IBookService
+    {
+        private readonly BookRepository db;
+        public BookService(){}
+        public BookService(BookRepository db1){
+            db = db1;
+        }
+        public List<Book> GetBooks() => db.GetBooks();
+        public Book GetBook(int id) => db.GetBook(id);
+        public Book SaveBook(Book book) => db.SaveBook(book);
+        public Book UpdateBook(int id, Book book) => db.UpdateBook(id,book);
+        public bool DeleteBook(int id) => db.DeleteBook(id);
+    }
+}
+ 
+Services>IBookService
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using dotnetapp.Models;
+using dotnetapp.Repository;
+ 
+namespace dotnetapp.Services
+{
+    public interface IBookService
+    {
+        List<Book> GetBooks();
+        Book GetBook(int id);
+        Book SaveBook(Book book);
+        Book UpdateBook(int id, Book book);
+        bool DeleteBook(int id);
+ 
+    }
+}
+ 
+Services>IOrderService.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using dotnetapp.Models;
+using dotnetapp.Repository;
+ 
+namespace dotnetapp.Services
+{
+    public interface IOrderService
+    {
+        List<Order> GetOrders();
+        Order GetOrder(int id);
+        Order SaveOrder(Order order);
+        Order UpdateOrder(int id, Order order);
+        bool DeleteOrder(int id);
+    }
+}
+ 
+Services>OrderServices.cs
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using dotnetapp.Repository;
+using dotnetapp.Models;
+ 
+namespace dotnetapp.Services
+{
+    public class OrderService : IOrderService
+    {
+        private readonly OrderRepository db;
+        public OrderService(){}
+        public OrderService(OrderRepository db1){
+            db = db1;
+        }
+        public List<Order> GetOrders() => db.GetOrders();
+        public Order GetOrder(int id) => db.GetOrder(id);
+        public Order SaveOrder(Order order) => db.SaveOrder(order);
+        public Order UpdateOrder(int id, Order order) => db.UpdateOrder(id, order);
+        public bool DeleteOrder(int id) => db.DeleteOrder(id);
+    }
+}
+ 
+ 
+Repository>BookRepository.cs
  
 using System;
 using System.Collections.Generic;
@@ -6,66 +136,135 @@ using System.Linq;
 using System.Threading.Tasks;
 using dotnetapp.Models;
  
-namespace dotnetapp.Services
+namespace dotnetapp.Repository
 {
-    public class StudentService
+    public class BookRepository
     {
-        private readonly List<Student> students;
-        public StudentService(){
-            students = new List<Student>(){
-                new Student{
-                    StudentId = 1,
-                    Name = "Alice",
-                    Age = 18,
-                    Grade = "A"
-                },
-                new Student{
-                    StudentId = 2,
-                    Name = "Bob",
-                    Age = 17,
-                    Grade = "B"
-                },
-                new Student{
-                    StudentId = 3,
-                    Name = "Charlie",
-                    Age = 16,
-                    Grade = "C"
-                }
-            };
+        public readonly List<Book> _books = new List<Book>();
+        public List<Book> GetBooks() => _books;
+        public Book GetBook(int id) => _books.FirstOrDefault(b => b.BookId == id);
+        public Book SaveBook(Book book){
+            book.BookId = _books.Count > 0 ? _books.Max(b => b.BookId) + 1 : 1;
+            _books.Add(book);
+            return book;
         }
-        public List<Student> GetAllStudents(){
-            return students;
-        }
-        public Student GetStudentById(int studentId){
-            return students.FirstOrDefault(s => s.StudentId == studentId);
-        }
-        public Student CreateStudent(Student newStudent){
-            students.Add(newStudent);
-            return newStudent;
-        }
-        public bool UpdateStudent(int studentId, Student updatedStudent){
-            var student = students.FirstOrDefault(s => s.StudentId == studentId);
-            if(student == null){
-                return false;
+        public Book UpdateBook(int id, Book book){
+            var existingBook = GetBook(id);
+            if(existingBook != null){
+                existingBook.BookName = book.BookName;
+                existingBook.Category = book.Category;
+                existingBook.Price = book.Price;
             }
-            student.Name = updatedStudent.Name;
-            student.Age = updatedStudent.Age;
-            student.Grade = updatedStudent.Grade;
-            return true;
+            return existingBook;
         }
-        public bool DeleteStudent(int studentId){
-            var student = students.FirstOrDefault(s => s.StudentId == studentId);
-            if(student == null){
-                return false;
+        public bool DeleteBook(int id){
+            var book = GetBook(id);
+            if(book != null){
+                _books.Remove(book);
+                return true;
             }
-            students.Remove(student);
-            return true;
+            return false;
         }
     }
 }
  
-StudentController.cs
+Repository>OrderRepository
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using dotnetapp.Models;
  
+namespace dotnetapp.Repository
+{
+    public class OrderRepository
+    {
+        public readonly List<Order> _orders = new List<Order>();
+        public List<Order> GetOrders() => _orders;
+        public Order GetOrder(int id) => _orders.FirstOrDefault(o => o.OrderId == id);
+        public Order SaveOrder(Order order){
+            order.OrderId = _orders.Count > 0 ? _orders.Max(o => o.OrderId) + 1 : 1;
+            _orders.Add(order);
+            return order;
+        }
+        public Order UpdateOrder(int id, Order order){
+            var existingOrder = GetOrder(id);
+            if(existingOrder != null){
+                existingOrder.CustomerName = order.CustomerName;
+                existingOrder.TotalAmount = order.TotalAmount;
+            }
+            return existingOrder;
+        }
+        public bool DeleteOrder(int id){
+            var order = GetOrder(id);
+            if(order != null){
+                _orders.Remove(order);
+                return true;
+            }
+            return false;
+        }
+    }
+}
+ 
+Controller>BookController
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using dotnetapp.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using dotnetapp.Services;
+using dotnetapp.Models;
+ 
+ 
+namespace dotnetapp.Controllers
+{
+    [ApiController]
+    [Route("api/books")]
+    public class BookController : ControllerBase
+    {
+        private readonly IBookService db;
+        public BookController(IBookService db1){
+            db = db1;
+        }
+        [HttpGet]
+        public IActionResult GetAllBooks(){
+            return Ok(db.GetBooks());
+        }
+        [HttpGet("{id}")]
+        public IActionResult GetBookById(int id){
+            var book = db.GetBook(id);
+            if(book == null) return NotFound();
+            return Ok(book);
+        }
+        [HttpPost]
+        public IActionResult AddBook([FromBody] Book book){
+            if(book == null) return BadRequest();
+            var createBook = db.SaveBook(book);
+            return Ok(createBook);
+        }
+        [HttpPut("{id}")]
+        public IActionResult UpdateBook(int id, [FromBody] Book book){
+            if(book == null) return BadRequest();
+            var updatedBook = db.UpdateBook(id, book);
+            if(updatedBook == null) return NotFound();
+            return NoContent();
+        }
+        [HttpDelete("{id}")]
+        public IActionResult DeleteBook(int id){
+            var isDeleted = db.DeleteBook(id);
+            // if(!isDeleted){
+            //     return NotFound();
+            // }
+            return NoContent();
+        }
+    }
+}
+ 
+ 
+Controllers>OrderController.cs
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -73,130 +272,57 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
- 
-using dotnetapp.Services;
 using dotnetapp.Models;
+using Microsoft.EntityFrameworkCore;
+using dotnetapp.Services;
  
 namespace dotnetapp.Controllers
-{   [ApiController]
-    [Route("api/[controller]")]
-    public class StudentController : ControllerBase
+{
+    [ApiController]
+    [Route("api/orders")]
+    public class OrderController : ControllerBase
     {
-        private readonly StudentService db;
-        public StudentController(StudentService db1){
+        private readonly IOrderService db;
+        public OrderController(IOrderService db1)
+        {
             db = db1;
         }
         [HttpGet]
-        public IActionResult GetAllStudents(){
-            var students = db.GetAllStudents();
-            if(students == null || students.Count == 0){
-                return NoContent();
-            }
-            return Ok(students);
+        public IActionResult GetAllOrders()
+        {
+            return Ok(db.GetOrders());
         }
-        [HttpGet("{studentId}")]
-        public IActionResult GetStudentById(int studentId){
-            var student = db.GetStudentById(studentId);
-            if(student == null){
-                return NotFound();
-            }
-            return Ok(student);
+        [HttpGet("{id}")]
+        public IActionResult GetOrderById(int id)
+        {
+            var order = db.GetOrder(id);
+            if (order == null) return NotFound();
+            return Ok(order);
         }
         [HttpPost]
-        public IActionResult CreateStudent(Student newStudent){
-            if(newStudent == null){
-                return BadRequest();
-            }
-            db.CreateStudent(newStudent);
-            return Created("", newStudent);
+        public IActionResult AddOrder([FromBody] Order order)
+        {
+            if (order == null) return BadRequest();
+            var createOrder = db.SaveOrder(order);
+            return Ok(createOrder);
         }
-        [HttpPut("{studentId}")]
-        public IActionResult UpdateStudent(int studentId, Student updatedStudent){
-            var res = db.UpdateStudent(studentId,updatedStudent);
-            if(!res){
-                return NotFound();
-            }
+        [HttpPut("{id}")]
+        public IActionResult UpdateOrder(int id, [FromBody] Order order)
+        {
+            if (order == null) return BadRequest();
+            var updatedOrder = db.UpdateOrder(id, order);
+            if (updatedOrder == null) return NotFound();
             return NoContent();
         }
-        [HttpDelete("{studentId}")]
-        public IActionResult DeleteStudent(int studentId){
-            var res = db.DeleteStudent(studentId);
-            if(!res){
-                return NotFound();
-            }
+        [HttpDelete("{id}")]
+        public IActionResult DeleteOrder(int id)
+        {
+            var isDeleted = db.DeleteOrder(id);
+            // if (!isDeleted){
+            //     return NotFound();
+            // }
             return NoContent();
         }
-    }
- 
-using dotnetapp.Services;
-using dotnetapp.Models;
- 
-var builder = WebApplication.CreateBuilder(args);
- 
-// Add Event services to the container.
- 
-builder.Services.AddControllers();
-builder.Services.AddSingleton<StudentService>(); // change this line here
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
- 
-var app = builder.Build();
- 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
- 
-app.UseHttpsRedirection();
- 
-app.UseAuthorization();
- 
-app.MapControllers();
- 
-app.Run();
- 
-using dotnetapp.Services;
-using dotnetapp.Models;
- 
-var builder = WebApplication.CreateBuilder(args);
- 
-// Add Event services to the container.
- 
-builder.Services.AddControllers();
-builder.Services.AddSingleton<StudentService>(); // change this line here
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
- 
-var app = builder.Build();
- 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
- 
-app.UseHttpsRedirection();
- 
-app.UseAuthorization();
- 
-app.MapControllers();
- 
-app.Run();
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
- 
-namespace dotnetapp.Models
-{
-    public class Student
-    {
-        public int StudentId{get;set;}
-        public string Name {get;set;}
-        public int Age{get;set;}
-        public string Grade {get;set;}
     }
 }
  
