@@ -1,73 +1,69 @@
-ProductController.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using dotnetapp.Data;
-using dotnetapp.Models;
-using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
  
-namespace dotnetapp.Controllers
+namespace dotnetapp.Models
 {
-    [ApiController]
-    [Route("api/products")]
-    public class ProductController : ControllerBase
-    {
-        public ApplicationDbContext db;
-        public ProductController(ApplicationDbContext db)
-        {
-            this.db=db;
-        }
-        [HttpGet]
-        public ActionResult<IEnumerable<Product>> GetProducts(){
-            var prods=db.Products.ToList();
-            return Ok(prods);
-        }
-        [HttpGet("{id}")]
-        public ActionResult<Product>GetProductById(int id){
-        Product pro=db.Products.FirstOrDefault(p=>p.Id==id);
-        if(pro==null)return NotFound();
-        return Ok(pro);
-        }
-        [HttpGet("filter")]
-        public ActionResult<IEnumerable<Product>>GetProductsByCategory([FromQuery] string category){
-            List<Product>prods=db.Products.Where(p=>p.Category==category).ToList();
-            if(prods==null){
-                return NotFound();
-            }
-            return Ok(prods);
-        }
-        [HttpPost]
-        public ActionResult<Product>CreateProduct(Product product){
-             
-             db.Products.Add(product);
-             db.SaveChanges();
-            return CreatedAtAction("CreateProduct",product);
+public class Plant
+{
+    [Key]
+    public int PlantId { get; set; }
+    [Required]
  
-        }
-    }
+    public string Name { get; set; } = string.Empty;
+    [Required]
+     public string ScientificName { get; set; } = string.Empty;
+ 
+    [Required]
+ 
+    public string Description { get; set; } = string.Empty;
+    [Required]
+ 
+    public double Price { get; set; }
+ 
+}
 }
  
-Data/ApplicationDbContext.cs
+ 
+ 
+plant model
+ 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using dotnetapp.Models;
-using Microsoft.EntityFrameworkCore;
-namespace dotnetapp.Data
+        using System.ComponentModel.DataAnnotations;
+namespace dotnetapp.Models
 {
-    public class ApplicationDbContext :DbContext
-    {
-       
-        public DbSet<Product>Products{get;set;}
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext>options):base(options){
-           
-        }
-    }
+public class User
+ 
+{
+    [Key]
+    public long UserId { get; set; }
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+    [Required]
+    public string Password { get; set; } = string.Empty;
+    [Required]
+ 
+    public string Username { get; set; } = string.Empty;
+ 
+    [Required]
+    public string MobileNumber { get; set; } = string.Empty;
+ 
+    [Required]
+    public string UserRole { get; set; } = string.Empty;
+ 
+}
 }
  
-Models/Product.cs
+ 
+ 
+USer Model
+ 
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -75,160 +71,434 @@ using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 namespace dotnetapp.Models
 {
-    public class Product
-    {
-        [Key]
-        public int Id{get;set;}
-        public string Name{get;set;}
-        public string Category{get;set;}
-        public decimal Price{get;set;}
-        public int Stock{get;set;}
- 
-    }
-}
- 
-Program.cs
-using dotnetapp.Data;
-using Microsoft.EntityFrameworkCore;
-var builder = WebApplication.CreateBuilder(args);
- 
-// Add services to the container.
-var conn="User ID=sa;password=examlyMssql@123;server=localhost;Database=appdb;trusted_connection=false;Persist Security Info=False;Encrypt=False";
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at Get started with Swashbuckle and ASP.NET Core | Microsoft Learn
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddDbContext<ApplicationDbContext>(app=>app.UseSqlServer(conn));
-var app = builder.Build();
- 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+public class LoginModel
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    [Required]
+ 
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+    [Required]
+    public string Password { get; set; } = string.Empty;
+ 
+}
 }
  
-app.UseHttpsRedirection();
+   
  
-app.UseAuthorization();
+Login Model
  
-app.MapControllers();
- 
-app.Run();
- 
-Get started with Swashbuckle and ASP.NET Core | Microsoft Learn
-Learn how to add Swashbuckle to your ASP.NET Core web API project to integrate the Swagger UI.
- 
-2nd-Controllers/ArtWorkController.cs
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading.Tasks;
-using dotnetapp.Models;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+namespace dotnetapp.Models
+{
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options): base(options)
  
+    {
+    }
+    public DbSet<User> Users { get; set; }
+ 
+    public DbSet<Plant> Plants { get; set; }
+ 
+}
+}
+ 
+ 
+ 
+ApplicationDbContext
+ 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using dotnetapp.Models;
+ 
+using dotnetapp.Services;
+ 
+using Microsoft.AspNetCore.Mvc;
 namespace dotnetapp.Controllers
 {
-    [ApiController]
-    [Route("api/artworks")]
-    public class ArtworkController : ControllerBase
+   
+ 
+[ApiController]
+ 
+[Route("api")]
+ 
+public class AuthenticationController : ControllerBase
+ 
+{
+    private readonly IAuthService _authService;
+    private readonly ApplicationDbContext _context;
+    private readonly ILogger<AuthenticationController> _logger;
+    public AuthenticationController(
+        IAuthService authService,
+        ApplicationDbContext context,
+ 
+        ILogger<AuthenticationController> logger)
     {
-   public ApplicationDbContext db;
-      public ArtworkController(ApplicationDbContext db)
-      { this.db=db;
-       
-      }
-      [HttpGet]
-      public ActionResult<IEnumerable<Artwork>>GetArtworks(){
-        return Ok(db.Artworks.ToList());
-      }
-      [HttpGet("{id}")]
-      public ActionResult<Artwork>GetArtworkById(int id){
-        Artwork work=db.Artworks.FirstOrDefault(a=>a.ArtworkId==id);
-        if(work==null){
-          return NotFound();
-        }
-        return Ok(work);
-      }
-      [HttpGet("filter")]
-      public ActionResult<IEnumerable<Artwork>>GetArtworksByArtist([FromQuery] string artist)
-      {
-           List<Artwork> work=db.Artworks.Where(a=>a.Artist==artist).ToList();
-        if(work==null){
-          return NotFound();
-        }
-        return Ok(work);
-      }
-      [HttpPost]
-      public ActionResult<Artwork>CreateArtwork(Artwork work){
-        db.Artworks.Add(work);
-        db.SaveChanges();
-        return CreatedAtAction("CreateArtwork",work);
-      }
+        _authService = authService;
+        _context = context;
+        _logger = logger;
     }
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginModel model)
+    {
+        try
+        {
+ 
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var token = await _authService.Login(model);
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest(new { message = "Invalid email or password" });
+            }
+            return Ok(new { token = token });
+        }
+ 
+        catch (Exception ex)
+ 
+        {
+ 
+            _logger.LogError(ex, "Error occurred during login");
+ 
+            return BadRequest(new { message = "An error occurred during login" });
+ 
+        }
+ 
+    }
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] User user)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            if (user.UserRole != "Admin" && user.UserRole != "Customer")
+            {
+                return BadRequest(new { message = "Invalid user role. Allowed roles are Admin or Customer" });
+            }
+            var result = await _authService.Registration(user, user.UserRole);
+ 
+            if (result != "User registered successfully")
+            {
+                return BadRequest(new { message = result });
+            }
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = result });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred during registration");
+ 
+            return BadRequest(new { message = "An error occurred during registration" });
+ 
+        }
+ 
+    }
+ 
+}
 }
  
-Models/ApplicationDbContext
+       
+ 
+AuthenticationConroller
+ 
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-namespace dotnetapp.Models
-{
-    public class ApplicationDbContext:DbContext
-    {
-        public DbSet<Artwork>Artworks{get;set;}
- 
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext>options):base(options){
- 
-        }
-       
-    }
-}
- 
-Models/Artwork.cs
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
- 
-namespace dotnetapp.Models
-{
-    public class Artwork
-    {
-        public int ArtworkId{get;set;}
-        public string Title{get;set;}
-        public string Artist{get;set;}
-        public int Year{get;set;}
-        public string Medium{get;set;}
-        public string Description{get;set;}
-    }
-}
- 
-Program.cs
+using Microsoft.AspNetCore.Mvc;
 using dotnetapp.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+namespace dotnetapp.Controllers
+{
+ 
+    [ApiController]
+ 
+    [Route("api/plants")]
+ 
+    [Authorize]
+    public class PlantController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+   public PlantController(ApplicationDbContext context)
+        {
+            _context = context;
+ 
+        }
+        [HttpGet]
+        public async Task<IActionResult> Get()
+ 
+        {
+            var plants = await _context.Plants.ToListAsync();
+ 
+            return Ok(plants);
+        }
+ 
+ 
+        [HttpGet("{id}")]
+ 
+        public async Task<IActionResult> GetById(int id)
+ 
+        {
+ 
+            var plant = await _context.Plants.FindAsync(id);
+ 
+ 
+            if (plant == null)
+ 
+            {
+ 
+                return NotFound();
+ 
+            }
+ 
+   return Ok(plant);
+ 
+        }
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+ 
+        public async Task<IActionResult> Post([FromBody] Plant plant)
+        {
+ 
+            if (plant == null)
+{
+ 
+                return BadRequest(new { message = "Plant data is required" });
+ 
+            }
+            _context.Plants.Add(plant);
+ 
+            await _context.SaveChangesAsync();
+ 
+ 
+            return CreatedAtAction(nameof(GetById), new { id = plant.PlantId }, plant);
+ 
+        }
+ 
+    }
+}
+ 
+ 
+PlantController
+ 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+    using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using dotnetapp.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+namespace dotnetapp.Services
+ 
+{
+public class AuthService : IAuthService
+{
+    private readonly ApplicationDbContext _context;
+       private readonly IConfiguration _configuration;
+    private readonly PasswordHasher<User> _passwordHasher;
+    public AuthService(ApplicationDbContext context, IConfiguration configuration)
+    {
+        _context = context;
+ 
+        _configuration = configuration;
+ 
+        _passwordHasher = new PasswordHasher<User>();
+ 
+    }
+    public async Task<string> Registration(User model, string role)
+ 
+    {
+        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+ 
+        if (existingUser != null)
+ 
+        {
+ 
+            return "User already exists";
+ 
+        }
+        model.UserRole = role;
+        model.Password = _passwordHasher.HashPassword(model, model.Password);
+        return "User registered successfully";
+ 
+    }
+    public async Task<string?> Login(LoginModel model)
+    {
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == model.Email);
+        if (user == null)
+        {
+            return null;
+        }
+        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.Password, model.Password);
+ 
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            return null;
+        }
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Name, user.Username),
+ 
+            new Claim(ClaimTypes.Email, user.Email),
+ 
+            new Claim(ClaimTypes.Role, user.UserRole),
+ 
+            new Claim("UserId", user.UserId.ToString())
+        };
+        return GenerateToken(claims);
+    }
+    public string GenerateToken(IEnumerable<Claim> claims)
+ 
+    {
+ 
+        var key = _configuration["Jwt:Key"] ?? "ThisIsASecretKeyForJwtAuthentication12345";
+ 
+        var issuer = _configuration["Jwt:Issuer"] ?? "dotnetapp";
+ 
+        var audience = _configuration["Jwt:Audience"] ?? "dotnetapp_users";
+ 
+        var duration = int.TryParse(_configuration["Jwt:DurationInMinutes"], out var mins) ? mins : 60;
+ 
+ 
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+ 
+        var credentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
+ 
+ 
+        var token = new JwtSecurityToken(
+ 
+            issuer: issuer,
+ 
+            audience: audience,
+ 
+            claims: claims,
+ 
+            expires: DateTime.UtcNow.AddMinutes(duration),
+ 
+            signingCredentials: credentials
+ 
+        );
+ 
+ 
+        return new JwtSecurityTokenHandler().WriteToken(token);
+ 
+    }
+ 
+}
+}
+ 
+ 
+ 
+AuthService
+ 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+     using System.Security.Claims;
+using dotnetapp.Models;
+ 
+namespace dotnetapp.Services
+{
+public interface IAuthService
+ 
+{
+       Task<string> Registration(User model, string role);
+   Task<string?> Login(LoginModel model);
+ 
+    string GenerateToken(IEnumerable<Claim> claims);
+ 
+}
+}
+   
+ 
+ 
+IAuthService
+ 
+using System.Text;
+ 
+using dotnetapp.Models;
+ 
+using dotnetapp.Services;
+ 
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+ 
+using Microsoft.EntityFrameworkCore;
+ 
+using Microsoft.IdentityModel.Tokens;
+ 
 var builder = WebApplication.CreateBuilder(args);
  
-// Add services to the container.
-var conn="User ID=sa;password=examlyMssql@123;server=localhost;Database=appdb;trusted_connection=false;Persist Security Info=False;Encrypt=False";
+builder.WebHost.UseUrls("http://0.0.0.0:8080");
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at Get started with Swashbuckle and ASP.NET Core | Microsoft Learn
+ 
 builder.Services.AddEndpointsApiExplorer();
+ 
 builder.Services.AddSwaggerGen();
-builder.Services.AddDbContext<ApplicationDbContext>(db=>db.UseSqlServer(conn));
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+ 
+options.UseSqlServer("user id=sa;password=examlyMssql@123;database=appdb;server=localhost;persist security info=false;trusted_connection=false;encrypt=false;"));
+ 
+builder.Services.AddScoped<IAuthService, AuthService>();
+ 
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "ThisIsASecretKeyForJwtAuthentication12345";
+ 
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "dotnetapp";
+ 
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "dotnetapp_users";
+ 
+builder.Services.AddAuthentication(options =>
+ 
+{
+options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+options.RequireHttpsMetadata = false;
+options.SaveToken = true;
+options.TokenValidationParameters = new TokenValidationParameters
+{
+    ValidateIssuer = true,
+    ValidateAudience = true,
+    ValidateLifetime = true,
+    ValidateIssuerSigningKey = true,
+ 
+    ValidIssuer = jwtIssuer,
+ 
+    ValidAudience = jwtAudience,
+ 
+    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+};
+});
+ 
+builder.Services.AddAuthorization();
+ 
 var app = builder.Build();
  
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
  
-app.UseHttpsRedirection();
+app.UseAuthentication();
  
 app.UseAuthorization();
  
@@ -236,6 +506,6 @@ app.MapControllers();
  
 app.Run();
  
-get; set
-Get started with Swashbuckle and ASP.NET Core
-Learn how to add Swashbuckle to your ASP.NET Core web API project to integrate the Swagger UI.
+ 
+Program.cs
+ 
