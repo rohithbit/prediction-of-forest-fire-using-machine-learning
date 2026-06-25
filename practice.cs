@@ -1,453 +1,177 @@
+ocelot.json
+Sumit Mitra(IN8230)
+25-06-2026 09:26
+{
+    "Routes": [
+        {
+        "DownstreamPathTemplate" : "/api/order",
+        "DownstreamScheme" : "http",
+        "DownstreamHostAndPorts" : [{
+            "Host" : "localhost",
+            "Port" : 8080
+        }
+    ],
+    "UpstreamPathTemplate" : "/order-api/order",
+    "UpstreamHttpMethod" : ["GET", "POST"]
+    }
+],
+"GlobalConfiguration": {}
+}
+Sumit Mitra(IN8230)
+25-06-2026 09:27
+apigateway-program.cs
+Sumit Mitra(IN8230)
+25-06-2026 09:27
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Ocelot.DependencyInjection;
+using Ocelot.Middleware;
+ 
+ 
+var builder = WebApplication.CreateBuilder(args);
+ 
+// builder.Configuration.SetBasePath(builder.Environment.ContentRootPath)
+//     .AddJsonFile("ocelot.json", optional: false, reloadOnChange: true)
+//     .AddEnvironmentVariables();
+ 
+builder.Configuration
+    .AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+ 
+builder.Services.AddControllers();
+builder.Services.AddOcelot();
+ 
+var app = builder.Build();
+ 
+// if (app.Environment.IsDevelopment())
+// {
+//     app.UseDeveloperExceptionPage();
+// }
+ 
+// app.UseHttpsRedirection();
+// app.UseRouting();
+// app.UseAuthorization();
+ 
+// app.MapControllers();
+await app.UseOcelot();
+ 
+app.Run();
+ 
+Sumit Mitra(IN8230)
+25-06-2026 09:27
+ordercontroller
+Sumit Mitra(IN8230)
+25-06-2026 09:27
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using dotnetapp.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using OrderService.Data;
+using OrderService.Models;
  
-namespace dotnetapp.Controllers
+namespace OrderService.Controllers
 {
-    [Route("[controller]")]
-    public class AccountController : Controller
+    [ApiController]
+    [Route("api/order")]
+    public class OrderController : Controller
     {
+        private readonly OrderDbContext db;
+        public OrderController(OrderDbContext db1){
+            db = db1;
+        }
         [HttpGet]
-        public IActionResult Register(){
-            return View();
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrders(){
+            return await db.Orders.ToListAsync();
         }
         [HttpPost]
-        public IActionResult Register(RegisterViewModel model){
-           return View();
+        public async Task<ActionResult<Order>> CreateOrder(Order order){
+            db.Orders.Add(order);
+            await db.SaveChangesAsync();
+            return StatusCode(201, new{
+                message = "Order created successfully",
+                order
+            });
         }
-        [HttpGet]
-        public IActionResult Login(){
-            return View();
-        }
-        [HttpPost]
-        public IActionResult Login(LoginViewModel model){
-            return View();
-        }
-        public IActionResult Logout(){
-            return View();
-        }
-       
     }
 }
- 
-=================
+Sumit Mitra(IN8230)
+25-06-2026 09:28
+datafolder/appdbcontext
+Sumit Mitra(IN8230)
+25-06-2026 09:28
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using OrderService.Models;
 using Microsoft.EntityFrameworkCore;
-using dotnetapp.Models;
-namespace dotnetapp.Controllers
+ 
+namespace OrderService.Data
 {
-    [Route("books")]
-    public class BookController : Controller
+    public class OrderDbContext : DbContext
     {
-        private static List<Book>books{get;set;}=new List<Book>();
-        public ApplicationDbContext db;
-     public BookController(ApplicationDbContext db){
-this.db=db;
-     }
- 
-     public IActionResult Index(){
-         
-        return View(books);
-     }
-     [HttpGet]
-     public IActionResult Create(){
-        return View();
-     }
-     [HttpPost]
-     public IActionResult Create(Book book){
-        book.BookId=books.Count+1;
-        books.Add(book);
-        return RedirectToAction("Index");
-     }
-   
-     [HttpGet]
-       [Route("")]
-     public IActionResult IndexDbContext(){
-        // var books=db.Books.ToList();
-               ViewBag.vari=db.Books.ToList();
-        return View();
-     }
-     [HttpGet]
-     [Route("create")]
-     public IActionResult CreateDbContext(){
-   ViewBag.Title="";
-        ViewBag.Author="";
-        ViewBag.Category="";
-        ViewBag.Price=0.0;
-        ViewBag.LibraryId=0;
-        return View();
-     }
-     [HttpPost]
-     [Route("create")]
-     public IActionResult CreateDbContext(Book book){
-     
-       
-        db.Books.Add(book);
-        db.SaveChanges();
- 
-        return View();
-     }
-     [HttpGet]
-     public IActionResult EditDbContext(int id){
-      var book=db.Books.FirstOrDefault(b=>b.BookId==id);
-      if(book==null){
-         return NotFound();
-      }
-      return View(book);
-     }
-      [HttpGet]
-     public IActionResult EditDbContext(int id,Book book){
-      var books=db.Books.FirstOrDefault(b=>b.BookId==id);
-      if(books==null){
-         return NotFound();
-      }
-      books=book;
-      db.SaveChanges();
-      return View(books);
-     }
-     [HttpGet]
-     public IActionResult DeleteDbContext(int id){
-        var books=db.Books.FirstOrDefault(b=>b.BookId==id);
-      if(books==null){
-         return NotFound();
-      }
- 
-      return View(books);
-     }
-     [HttpPost]
- 
-   public IActionResult DeleteConfirmedDbContext(int id){
-        var books=db.Books.FirstOrDefault(b=>b.BookId==id);
-      if(books==null){
-         return NotFound();
-      }
-      db.Books.Remove(books);
-      db.SaveChanges();
- 
-      return RedirectToAction("Index");
-     }
+        public OrderDbContext(DbContextOptions<OrderDbContext> options) : base(options){
+        }
+        public DbSet<Order> Orders{get;set;}
     }
 }
-=======================
-using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
-using dotnetapp.Models;
- 
-namespace dotnetapp.Controllers
-{
-    public class HomeController : Controller
-    {
-        private readonly ILogger<HomeController> _logger;
- 
-        public HomeController(ILogger<HomeController> logger)
-        {
-            _logger = logger;
-        }
- 
-        public IActionResult Index()
-        {
-            return View();
-        }
- 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
- 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
-    }
-}
-++======================
- 
+Sumit Mitra(IN8230)
+25-06-2026 09:28
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+ 
+namespace OrderService.Models
+{
+    public class Order
+    {
+        public int OrderId{get;set;}
+        public string CustomerName{get;set;}
+        public DateTime OrderDate {get;set;}
+        public decimal TotalAmount {get;set;}
+    }
+}
+Sumit Mitra(IN8230)
+25-06-2026 09:28
+program.cs order
+Sumit Mitra(IN8230)
+25-06-2026 09:28
+using System.Buffers;
 using Microsoft.EntityFrameworkCore;
-using dotnetapp.Models;
-namespace dotnetapp.Controllers
+using OrderService.Data;
+var builder = WebApplication.CreateBuilder(args);
+ 
+// Add services to the container.
+var con = "User ID=sa;password=examlyMssql@123;server=localhost;Database=appdb;trusted_connection=false;Persist Security Info=False;Encrypt=False";
+builder.Services.AddControllers();
+builder.Services.AddDbContext<OrderDbContext>(options => options.UseSqlServer(con));
+ 
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+ 
+var app = builder.Build();
+ 
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
 {
-    [Route("libraries")]
-    public class LibraryController : Controller
-    {
-        public ApplicationDbContext db;
-        public LibraryController(ApplicationDbContext db){
-   this.db=db;
-        }
-        [Route("")]
-         public IActionResult Index(){
-   var libs=db.Libraries.ToList();
-            return View(libs);
-         }
-         [HttpGet]
-         [Route("create")]
-         public IActionResult Create(){
-            return View();
-         }
-         [HttpPost]
-         [Route("create")]
-         public IActionResult Create(Library library){
-            db.Libraries.Add(library);
-            db.SaveChanges();
-            return View();
-         }
-    }
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
  
-namespace dotnetapp.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-public class ApplicationDbContext :IdentityDbContext{
+app.UseHttpsRedirection();
  
-public DbSet<Book>Books{get;set;}
-public DbSet<Library>Libraries{get;set;}
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext>options):base(options){
+app.UseAuthorization();
  
-    }
-    // protected override void OnModelCreating(ModelBuilder modelBuilder)
-    // {
-    //     modelBuilder.Entity<Library>()
-    //     .HasMany(l=>l.Books)
-    //     .WithOne(b=>b.Library)
-    //     .HasForeignKey(b=>b.LibraryId);
-    // }
+app.MapControllers();
  
-}
-========================
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.ComponentModel.DataAnnotations;
-namespace dotnetapp.Models
-{
-    public class Book
-    {
-        [Key]
-        public int BookId{get;set;}
-        [Required(ErrorMessage ="Title is required.")]
-        public string Title{get;set;}
-         [Required(ErrorMessage ="Author is required.")]
-        public string Author{get;set;}
-         [Required(ErrorMessage ="Category is required.")]
-        public string Category{get;set;}
-         [Required(ErrorMessage ="Price amount is required.")]
-         [Range(1.00,double.MaxValue,ErrorMessage ="Price amount must be greater than 0.")]
-        public decimal Price{get;set;}
- 
-        public int LibraryId{get;set;}
-        public Library Library{get;set;}
- 
-    }
-}
-+++++++++++++++++++++++++++++
- 
-namespace dotnetapp.Models
-{
-    public class ErrorViewModel
-    {
-        public string? RequestId { get; set; }
- 
-        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
-    }
-}
-+++++++++++++++++++++++++++++++++++
- 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.ComponentModel.DataAnnotations;
-namespace dotnetapp.Models
-{
-    public class Library
-    {
-        [Key]
-        public int LibraryId{get;set;}
-        [Required(ErrorMessage ="Name is required.")]
-        public string Name{get;set;}
-                [Required(ErrorMessage ="Address is required.")]
-        public string Address{get;set;}
-        [Range(0,int.MaxValue,ErrorMessage ="MaximumCapacity must be greater than or equal to 0.")]
-        public int MaximumCapacity{get;set;}
-        public ICollection<Book>Books{get;set;}
-    }
-}
-=======================
- 
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
- 
-namespace dotnetapp.Models
-{
-    public class LoginViewModel
-    {
-        [Required]
-        public string Email{get;set;}
-        [DataType(DataType.Password)]
-        public string Password{get;set;}
-    }
-}
-=========================
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
- 
-namespace dotnetapp.Models
-{
-    public class RegisterViewModel
-    {
-        [Required]
-        public string Email{get;set;}
-        [DataType(DataType.Password)]
-        public string Password{get;set;}
-           [DataType(DataType.Password)]
-        public string ConfirmPassword{get;set;}
-    }
-}
- 
- 
- 
-Account-Login
-@model dotnetapp.Models.LoginViewModel;
- 
-<h2>Login</h2>
-<form asp-action="Login" asp-asp-controller="Account" method="post">
-    <label asp-for="Email">Email</label>
-    <input  asp-for="Email"/>
-       <label asp-for="Password">Password</label>
-    <input  asp-for="Password"/>
-   
-    <button type="submit">Login</button>
-</form>
-<p>Dont have an account? <a asp-action="Register">Register</a></p>
- 
-==========================
-Account-register
-<H2 id="Register">Register</H2>
-===============
-@model Book
-<h1>Create Book</h1>
-<form asp-action="Create" method="post">
-    <label asp-for="Title">Title</label>
-    <input asp-for="Title"/>
-       <label asp-for="Author">Author</label>
-    <input asp-for="Author"/>
-       <label asp-for="Category">Category</label>
-    <input asp-for="Category"/>
-     <label asp-for="Price">Price</label>
-    <input asp-for="Price"/>
-    <button type="submit">Create</button>
-</form>
- 
-=========================
- 
-<h1>Create Book</h1>
-<form asp-action="CreateDbContext" method="post">
-    <label >Title</label>
-    <input type="text" name="Title"value="@ViewBag.Title"/>
-       <label >Author</label>
-      <input type="text" name="Author" value="@ViewBag.Author"/>
-       <label >Category</label>
-   <input type="text" name="Category" value="@ViewBag.Category"/>
-     <label >Price</label>
-    <input type="number" name="Price" value="@ViewBag.Price"/>
-    <button type="submit">Create</button>
-</form>
- 
-======================
-@model List<Book>
-<h1>Book List</h1>
-<a asp-action="Create" >Create New Book</a>
-<table>
-    <thead>
-        <th>Title</th>
-        <th>Author</th>
-        <th>Category</th>
-        <th>Price</th>
-    </thead>
-    <table>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.BookId</td>
-                <td>@item.Author</td>
-                <td>@item.Category</td>
-                <td>@item.Price</td>
-            </tr>
-           
-        }
-    </table>
-</table>
-================================
- 
- 
-<h1>Book List</h1>
-<a asp-action="Create" >Create New Book</a>
-<table>
-    <thead>
-        <th>Title</th>
-        <th>Author</th>
-        <th>Category</th>
-        <th>Price</th>
-    </thead>
-    <table>
-        @foreach (var item in ViewBag.vari)
-        {
-            <tr>
-                <td>@item.BookId</td>
-                <td>@item.Author</td>
-                <td>@item.Category</td>
-                <td>@item.Price</td>
-            </tr>
-           
-        }
-    </table>
-</table>
-<h1>Book List</h1>
-<a asp-action="Create" >Create New Book</a>
-<table>
-    <thead>
-        <th>Title</th>
-        <th>Author</th>
-        <th>Category</th>
-        <th>Price</th>
-    </thead>
-    <table>
-        @foreach (var item in ViewBag.vari)
-        {
-            <tr>
-                <td>@item.BookId</td>
-                <td>@item.Author</td>
-                <td>@item.Category</td>
-                <td>@item.Price</td>
-            </tr>
-           
-        }
-    </table>
-</table>
+app.Run();
  
